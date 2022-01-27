@@ -1,0 +1,34 @@
+version: "3.8"
+services:
+  kuboard:
+    image: swr.cn-east-2.myhuaweicloud.com/kuboard/kuboard:v3
+    container_name: kuboard
+    restart: always
+    # read_only: true
+    ports:
+      - "10080:80"
+      - "443:443"
+      - "10081:10081/tcp"
+      - "10081:10081/udp"
+    environment:
+      # KUBOARD_ENDPOINT: 'http://172.17.16.17:30080'
+      KUBOARD_ENDPOINT: 'https://txk.ansandy.com'
+      KUBOARD_SERVER_LOGRUS_LEVEL: info  # error / debug / trace
+      # KUBOARD_AGENT_KEY 是 Agent 与 Kuboard 通信时的密钥，请修改为一个任意的包含字母、数字的32位字符串，此密钥变更后，需要删除 Kuboard Agent 重新导入。
+      KUBOARD_AGENT_KEY: 32b7d6572c6255a11b4eec9009e4f816
+      KUBOARD_AGENT_SERVER_UDP_PORT: "10081"
+      KUBOARD_AGENT_SERVER_TCP_PORT: "10081"
+      KUBOARD_TLS_CERT: "/etc/certs/ssl/server.crt"
+      KUBOARD_TLS_KEY: "/etc/certs/ssl/server.key"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1024M
+        reservations:
+          memory: 128M
+    volumes:
+      - ./cert/6229228_txk.ansandy.com.pem:/etc/certs/ssl/server.crt
+      - ./cert/6229228_txk.ansandy.com.key:/etc/certs/ssl/server.key
+      - ./kuboard-data:/data
+    # network_mode: "host"

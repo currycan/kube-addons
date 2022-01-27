@@ -1,0 +1,89 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: data-claim
+spec:
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-sc
+  labels:
+    app: test-sc
+spec:
+  selector:
+    matchLabels:
+      app: test-sc
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: test-sc
+    spec:
+      containers:
+      - name: test-sc
+        image: nginx:alpine
+        command:
+        - "/bin/sh"
+        args:
+        - "-c"
+        - |
+          echo 'data-claim' > /data-claim/SUCCESS exit 0 || exit 1;
+          exec "nginx" "-g" "daemon off;"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 100m
+            memory: 100Mi
+        livenessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 5
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        env:
+        - name: TZ
+          value: Asia/Shanghai
+        ports:
+        - containerPort:  80
+          name: test-sc
+        volumeMounts:
+        - name: data-claim
+          mountPath: "/data-claim"
+        - name: localtime
+          mountPath: /etc/localtime
+        securityContext:
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+      volumes:
+      - name: data-claim
+        persistentVolumeClaim:
+          claimName: data-claim
+      - name: localtime
+        hostPath:
+          path: /usr/share/zoneinfo/Asia/Shanghai
+---

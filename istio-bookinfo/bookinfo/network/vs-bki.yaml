@@ -1,0 +1,37 @@
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: bookinfo
+spec:
+  hosts:
+    # 虚拟service，客户端请求中的目的地址。内部访问时与k8s service名称相同；外部访问内部时，与外部客户端的目的地相同，内部访问外部时，与内部客户端的目的地相同。总之就是客户端可达的目的地，istio对对拦截的请求进行解析
+  - "bki.test.com"
+  gateways:
+  - bookinfo
+  http:
+  - match:
+    - uri:
+        exact: /productpage
+    - uri:
+        prefix: /static
+    - uri:
+        exact: /login
+    - uri:
+        exact: /logout
+    - uri:
+        prefix: /api/v1/products
+    route:
+    - destination:
+        # 对应kubernetes的service "productpage"，与DestinationRule的host相同，均为注册到注册中心的service表项
+        host: productpage
+        port:
+          number: 9080
+  - match:
+    - uri:
+        prefix: /details
+    - uri:
+        exact: /health
+    route:
+    - destination:
+        host: details

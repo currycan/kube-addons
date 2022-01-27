@@ -1,0 +1,22 @@
+[
+  {
+    "op": "add",
+    "path": "/spec/template/spec/containers/0/volumeMounts/0",
+    "value": {
+      "name": "ingressgateway-bookinfo-certs",
+      "mountPath": "/etc/istio/ingressgateway-bookinfo-certs",
+      "readOnly": true
+    }
+  },
+  {
+    "op": "add",
+    "path": "/spec/template/spec/volumes/0",
+    "value": {
+      "name": "ingressgateway-bookinfo-certs",
+      "secret": {
+        "secretName": "istio-ingressgateway-bookinfo-certs",
+        "optional": true
+      }
+    }
+  }
+]

@@ -1,0 +1,59 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: docker-data
+  namespace: kube-system
+spec:
+  storageClassName: local-path
+  # local-path 只支持 ReadWriteOnce
+  accessModes:
+    - ReadWriteOnce
+    # - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Mi
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: docker-ci
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: docker-ci
+  template:
+    metadata:
+      labels:
+        app: docker-ci
+    spec:
+      containers:
+      - name: docker-ci
+        image: 'docker:stable-dind'
+        command:
+        - "/bin/sh"
+        args:
+        - "-c"
+        - |
+          cp /usr/local/bin/docker /mnt/ || exit 1;
+          exec dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:8000
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /mnt
+          name: docker
+        - mountPath: /var/run
+          name: host
+        - mountPath: /var/lib/docker
+          name: data
+      volumes:
+      - name: docker
+        hostPath:
+          path: /usr/bin
+      - name: host
+        hostPath:
+          path: /var/run
+      - name: data
+        persistentVolumeClaim:
+          claimName: docker-data

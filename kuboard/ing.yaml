@@ -1,0 +1,27 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+  name: kuboard-v3-nginx
+  namespace: kuboard
+# kubectl create secret tls <secret-name> --cert <cert-file> --key <key-file> -n <ns>
+# kubectl create secret tls txk-ing --cert txk.ztaoz.com.pem --key txk.ztaoz.com.key -n kuboard
+# http://106.54.160.91/
+spec:
+  tls:
+  - hosts:
+    - txk.ztaoz.com
+    secretName: txk-ing
+  rules:
+  - host: txk.ztaoz.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kuboard-v3
+            port:
+              number: 80

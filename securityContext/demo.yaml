@@ -1,0 +1,149 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: data
+spec:
+  storageClassName: nfs-storage-class
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stress-app
+  annotations:
+    seccomp.security.alpha.kubernetes.io/pod: "runtime/default"
+    security.alpha.kubernetes.io/unsafe-sysctls: net.core.somaxconn=65535
+  labels:
+    app: stress-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stress-app
+  template:
+    metadata:
+      labels:
+        app: stress-app
+    spec:
+      automountServiceAccountToken: false
+      # imagePullSecrets:
+      # - name: reg-secret
+      # nodeSelector:
+      #   kubernetes.io/hostname: 10.177.92.6
+      # priorityClassName: high-priority
+      containers:
+      - name: stress-app
+        image: currycan/stress-app:0.0.4-alpine
+        # command:
+        #   - sh
+        #   - -c
+        #   - |
+        #     # exec /bin/tini -- java ${APP_OPTS} ${JAVA_OPTS} ${JVM_ARGS} ${JVM_GC} -jar "${WORKDIR}/${JAR_FILE}" "$@"
+        args:
+          - "--file.path=/etc/hosts"
+        imagePullPolicy: IfNotPresent
+        # 配置容器 workdir,目录不存在会自动创建！
+        # workingDir: /workdir
+        ports:
+        - name: http
+          containerPort: 8080
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - sleep 1
+          preStop:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - sleep 1
+        env:
+        - name: JAVA_OPTS
+          value: >-
+            -XX:+UseG1GC
+            -XX:MaxGCPauseMillis=100
+            -XX:InitiatingHeapOccupancyPercent=40
+            -XX:+ParallelRefProcEnabled
+        - name: JVM_ARGS
+          value: >-
+            -XX:+UseContainerSupport
+            -XX:+UnlockExperimentalVMOptions
+            -XX:+UseCGroupMemoryLimitForHeap
+            -XX:MaxRAMPercentage=80.0
+            -XX:InitialRAMPercentage=50.0
+            -XX:MinRAMPercentage=40.0
+        - name: JVM_GC
+          value: >-
+            -XX:+PrintTenuringDistribution
+            -XX:+PrintGCDetails
+            -XX:+PrintGCDateStamps
+            -XX:+PrintHeapAtGC
+            -Xloggc:/jvm/logs/gc-%t.log
+            -XX:ErrorFile=/jvm/logs/hs_err_%p.log
+            -XX:+PrintGCApplicationStoppedTime
+            -XX:+PrintGCApplicationConcurrentTime
+            -XX:+HeapDumpOnOutOfMemoryError
+            -XX:+PrintClassHistogramBeforeFullGC
+            -XX:+PrintClassHistogramAfterFullGC
+            -XX:HeapDumpPath=/jvm/logs/
+        - name: TZ
+          value: Asia/Shanghai
+        resources:
+          limits:
+            cpu: '1'
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 10
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 2
+        securityContext:
+          # 以特权运行容器，需要提前在kube-apiserver和kubelet启动时添加参数--allow-privileged=true（默认开启）
+          # 可以使用sudo提升到root权限，建议关闭
+          privileged: false
+          # 禁止/允许其他进程获取比父进程更多的特权,privileged=true时，一定要设置为 true
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 9001
+          runAsGroup: 9001
+          # 应用需要写入文件（如日志）的，开启会导致应用启动失败
+          readOnlyRootFilesystem: false
+          # # 当以 root 用户启动时, 配置 capabilities 需要：privileged=true
+          capabilities:
+            add:
+            - NET_BIND_SERVICE
+            drop:
+            - all
+        volumeMounts:
+        - name: dd-file
+          mountPath: /app/logs/app-demo/
+      volumes:
+      - name: dd-file
+        persistentVolumeClaim:
+          claimName: data

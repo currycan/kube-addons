@@ -1,0 +1,14 @@
+apiVersion: "security.istio.io/v1beta1"
+kind: "AuthorizationPolicy"
+metadata:
+  name: "productpage-viewer"
+  namespace: bookinfo
+spec:
+  selector:
+    matchLabels:
+      app: productpage
+  rules:
+  # 只容许通过 GET 方法访问 productpage 工作负载
+  - to:
+    - operation:
+        methods: ["GET"]

@@ -1,0 +1,50 @@
+---
+apiVersion: tenant.kubesphere.io/v1alpha2
+kind: WorkspaceTemplate
+metadata:
+  name: all-demo
+spec:
+  placement:
+    clusters:
+    - name: host
+  template:
+    spec:
+      manager: adrew
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    kubesphere.io/workspace: all-demo
+  name: all-demo
+---
+apiVersion: app.k8s.io/v1beta1
+kind: Application
+metadata:
+  annotations:
+    servicemesh.kubesphere.io/enabled: 'true'
+  # application 标签
+  labels:
+    app.kubernetes.io/name: demo
+    app.kubernetes.io/version: v1
+  name: demo
+  namespace: all-demo
+spec:
+  addOwnerRef: true
+  componentKinds:
+  - group: ""
+    kind: Service
+  - group: apps
+    kind: Deployment
+  - group: apps
+    kind: StatefulSet
+  - group: networking.k8s.io
+    kind: Ingress
+  - group: servicemesh.kubesphere.io
+    kind: Strategy
+  - group: servicemesh.kubesphere.io
+    kind: ServicePolicy
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: demo
+      app.kubernetes.io/version: v1

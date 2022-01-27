@@ -1,0 +1,21 @@
+---
+apiVersion: tenant.kubesphere.io/v1alpha2
+kind: WorkspaceTemplate
+metadata:
+  name: fls-abc
+spec:
+  placement:
+    clusters:
+    - name: host
+  template:
+    spec:
+      manager: adrew
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    kubernetes.io/metadata.name: hello
+    kubesphere.io/namespace: hello
+    kubesphere.io/workspace: fls-abc
+  name: hello

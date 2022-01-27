@@ -1,0 +1,40 @@
+docker pull docker.io/csiplugin/snapshot-controller:v4.0.0
+docker pull docker.io/kubesphere/ks-apiserver:v3.2.1
+docker pull docker.io/kubesphere/ks-console:v3.2.1
+docker pull docker.io/kubesphere/ks-controller-managerv3.2.1
+docker pull docker.io/kubesphere/ks-installer:v3.2.1
+docker pull docker.io/kubesphere/kube-rbac-proxy:v0.8.0
+docker pull docker.io/kubesphere/kube-state-metrics:v1.9.7
+docker pull docker.io/kubesphere/kubectl:v1.22.0
+docker pull docker.io/kubesphere/kubefed:v0.8.1
+docker pull docker.io/kubesphere/notification-manager-operatorv1.4.0
+docker pull docker.io/kubesphere/notification-managerv1.4.0
+docker pull docker.io/kubesphere/notification-tenant-sidecarv3.2.0
+docker pull docker.io/kubesphere/prometheus-config-reloaderv0.43.2
+docker pull docker.io/kubesphere/prometheus-operatorv0.43.2
+docker pull docker.io/kubesphere/tower:v0.2.0
+docker pull docker.io/mirrorgooglecontainers/defaultbackend-amd641.4
+docker pull docker.io/prom/alertmanager:v0.21.0
+docker pull docker.io/prom/node-exporter:v0.18.1
+docker pull docker.io/prom/prometheus:v2.26.0
+
+docker save -o kubesphere-v3.2.1.tgz \
+  docker.io/csiplugin/snapshot-controller:v4.0.0 \
+  docker.io/kubesphere/ks-apiserver:v3.2.1 \
+  docker.io/kubesphere/ks-console:v3.2.1 \
+  docker.io/kubesphere/ks-controller-managerv3.2.1 \
+  docker.io/kubesphere/ks-installer:v3.2.1 \
+  docker.io/kubesphere/kube-rbac-proxy:v0.8.0 \
+  docker.io/kubesphere/kube-state-metrics:v1.9.7 \
+  docker.io/kubesphere/kubectl:v1.22.0 \
+  docker.io/kubesphere/kubefed:v0.8.1 \
+  docker.io/kubesphere/notification-manager-operatorv1.4.0 \
+  docker.io/kubesphere/notification-managerv1.4.0 \
+  docker.io/kubesphere/notification-tenant-sidecarv3.2.0 \
+  docker.io/kubesphere/prometheus-config-reloaderv0.43.2 \
+  docker.io/kubesphere/prometheus-operatorv0.43.2 \
+  docker.io/kubesphere/tower:v0.2.0 \
+  docker.io/mirrorgooglecontainers/defaultbackend-amd641.4 \
+  docker.io/prom/alertmanager:v0.21.0 \
+  docker.io/prom/node-exporter:v0.18.1 \
+  docker.io/prom/prometheus:v2.26.0

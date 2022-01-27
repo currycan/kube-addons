@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    k8s.kuboard.cn/workload: hubble-ui
+    kubernetes.io/ingress.class: "apisix"
+  labels:
+    k8s.kuboard.cn/layer: 'monitor'
+    k8s.kuboard.cn/name: hubble-ui
+  name: hubble-ui
+  namespace: kube-system
+spec:
+  rules:
+  - host: hubble.local.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: hubble-ui
+            port:
+              number: 80

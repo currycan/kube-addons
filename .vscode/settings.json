@@ -1,0 +1,10 @@
+{
+    "editor.tabSize": 2,
+    "[yaml]": {
+        "editor.defaultFormatter": "Tim-Koehler.helm-intellisense"
+    },
+    "files.associations": {
+        "*.yaml": "yaml",
+        "*.yml": "ansible"
+    }
+}

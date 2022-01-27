@@ -1,0 +1,38 @@
+---
+apiVersion: servicemesh.kubesphere.io/v1alpha2
+kind: Strategy
+metadata:
+  annotations:
+    servicemesh.kubesphere.io/newWorkloadName: nginx-v2
+    servicemesh.kubesphere.io/oldWorkloadName: nginx-v1
+    servicemesh.kubesphere.io/workloadReplicas: "2"
+    servicemesh.kubesphere.io/workloadType: deployments
+  labels:
+    app: nginx
+    app.kubernetes.io/name: nginx
+    app.kubernetes.io/version: v1
+  name: tomcat
+  namespace: default
+spec:
+  principal: v1
+  selector:
+    matchLabels:
+      app: nginx
+      app.kubernetes.io/name: nginx
+      app.kubernetes.io/version: v1
+  strategyPolicy: WaitForWorkloadReady
+  template:
+    spec:
+      hosts:
+      - nginx
+      http:
+      - route:
+        - destination:
+            host: nginx
+            subset: v1
+          weight: 50
+        - destination:
+            host: nginx
+            subset: v2
+          weight: 50
+  type: Canary

@@ -1,0 +1,110 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    servicemesh.kubesphere.io/enabled: 'true'
+  labels:
+    app: nginx
+    app.kubernetes.io/name: demo
+    app.kubernetes.io/version: v1
+    version: v2
+  name: nginx-v2
+  namespace: all-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+      app.kubernetes.io/name: demo
+      app.kubernetes.io/version: v1
+      version: v2
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: 'true'
+      labels:
+        app: nginx
+        app.kubernetes.io/name: demo
+        app.kubernetes.io/version: v1
+        version: v2
+    spec:
+      containers:
+        - image: 'tomcat:alpine'
+          imagePullPolicy: IfNotPresent
+          name: tomcat
+          ports:
+            - containerPort: 8080
+              name: http-80
+              protocol: TCP
+          env:
+            - name: TZ
+              value: Asia/Shanghai
+          resources:
+            limits:
+              cpu: '500'
+              memory: 512Mi
+            requests:
+              cpu: 20m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /
+              port: 8080
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+---
+apiVersion: servicemesh.kubesphere.io/v1alpha2
+kind: Strategy
+metadata:
+  annotations:
+    servicemesh.kubesphere.io/newWorkloadName: nginx-v2
+    servicemesh.kubesphere.io/oldWorkloadName: nginx-v1
+    servicemesh.kubesphere.io/workloadReplicas: "2"
+    servicemesh.kubesphere.io/workloadType: deployments
+  labels:
+    app: nginx
+    app.kubernetes.io/name: demo
+    app.kubernetes.io/version: v1
+  name: tomcat
+  namespace: all-demo
+spec:
+  principal: v1
+  selector:
+    matchLabels:
+      app: nginx
+      app.kubernetes.io/name: demo
+      app.kubernetes.io/version: v1
+  strategyPolicy: WaitForWorkloadReady
+  template:
+    spec:
+      hosts:
+      - nginx
+      http:
+      - route:
+        - destination:
+            host: nginx
+            subset: v1
+          weight: 50
+        - destination:
+            host: nginx
+            subset: v2
+          weight: 50
+  type: Canary

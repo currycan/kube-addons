@@ -1,0 +1,24 @@
+apiVersion: apps.kruise.io/v1alpha1
+kind: ImagePullJob
+metadata:
+  name: job-with-always
+spec:
+  image: nginx:1.21   # [required] 完整的镜像名 name:tag
+  # pullSecrets: # 镜像来自一个私有仓库
+  # - secret-name1
+  # - secret-name2
+  parallelism: 10      # [optional] 最大并发拉取的节点梳理, 默认为 1
+  selector:            # [optional] 指定节点的 名字列表 或 标签选择器 (只能设置其中一种)
+    # names:
+    # - vm-16-17-centos
+    matchLabels: # 与 name 二选一
+      node-role.kubernetes.io/master: ''
+  # podSelector:         # [optional] pod label 选择器来在这些 pod 所在节点上拉取镜像, 与 selector 不能同时设置.
+  #  pod-label: xxx
+  completionPolicy:
+    type: Always                  # [optional] 默认为 Always
+    activeDeadlineSeconds: 1200   # [optional] 无默认值, 只对 Alway 类型生效
+    ttlSecondsAfterFinished: 300  # [optional] 无默认值, 只对 Alway 类型生效
+  pullPolicy:                     # [optional] 默认 backoffLimit=3, timeoutSeconds=600
+    backoffLimit: 3
+    timeoutSeconds: 300

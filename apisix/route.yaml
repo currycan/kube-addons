@@ -1,0 +1,17 @@
+# apiVersion: apisix.apache.org/v2beta1
+apiVersion: apisix.apache.org/v2alpha1
+kind: ApisixRoute
+metadata:
+  name: apisix-dashboard-route
+  namespace: ingress-apisix
+spec:
+  http:
+  - name: rule1
+    match:
+      hosts:
+      - dashboard.local.com
+      paths:
+      - /*
+    backend:
+        serviceName: apisix-dashboard
+        servicePort: 80

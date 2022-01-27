@@ -1,0 +1,54 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: data-claim
+spec:
+  storageClassName: nfs-storage-class
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-sc
+  namespace: default
+  labels:
+    app: test-sc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-sc
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: test-sc
+    spec:
+      containers:
+      - name: test-sc
+        image: nginx:alpine
+        imagePullPolicy: IfNotPresent
+        command:
+        - "/bin/sh"
+        args:
+        - "-c"
+        - |
+          echo 'data-claim' > /data-claim/SUCCESS exit 0 || exit 1;
+          exec "nginx" "-g" "daemon off;"
+        volumeMounts:
+        - name: data-claim
+          mountPath: "/data-claim"
+        resources:
+        securityContext:
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+      volumes:
+        - name: data-claim
+          persistentVolumeClaim:
+            claimName: data-claim
