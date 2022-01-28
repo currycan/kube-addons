@@ -1,0 +1,103 @@
+# Default values for redis-cluster.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# replicaCount: 6
+
+updateStrategy:
+  ## StrategyType
+  ## Can be set to RollingUpdate or OnDelete
+  type: RollingUpdate
+  rollingUpdate: {}
+
+podAnnotations: {}
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: false
+  name: ""
+  automountServiceAccountToken: true
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - redis
+          topologyKey: kubernetes.io/hostname
+
+# -- Node labels for controller pod assignment
+## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+##
+nodeSelector:
+  kubernetes.io/os: linux
+
+tolerations: []
+
+terminationGracePeriodSeconds: 20
+
+initImage:
+  repository: currycan/peer-finer
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "1.0.0"
+
+redisImage:
+  repository: redis
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "5.0.10"
+
+lifecycleHooks: {}
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  limits: {}
+  #   cpu: 250m
+  #   memory: 256Mi
+  requests: {}
+  #   cpu: 250m
+  #   memory: 256Mi
+
+data:
+  storageClassName: "nfs-storage-class"
+  storageSize: 5Gi
+
+redisPassword: auth12345
+
+nodePortIP: 10.0.0.1
+redisNodePort:
+  # redis nodePort expose server
+  node1: 30000
+  node2: 30001
+  node3: 30002
+  node4: 30003
+  node5: 30004
+  node6: 30005
+  # redis gossip nodePort expose server
+  gossip1: 30006
+  gossip2: 30007
+  gossip3: 30008
+  gossip4: 30009
+  gossip5: 30010
+  gossip6: 30011

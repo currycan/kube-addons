@@ -1,0 +1,113 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "redis-cluster.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redis-cluster.labels" . | nindent 4 }}
+data:
+  redis.conf: |
+    dir /data
+    port 6379
+    bind 0.0.0.0
+    appendonly yes
+    protected-mode no
+    pidfile /data/redis-6379.pid
+    loglevel notice
+    logfile "/data/redis.log"
+    cluster-enabled yes
+    cluster-require-full-coverage no
+    cluster-config-file /data/nodes.conf
+    cluster-migration-barrier 1
+    cluster-node-timeout 15000
+    activerehashing yes
+    appendfsync everysec
+    hash-max-ziplist-entries 512
+    hash-max-ziplist-value 64
+    hll-sparse-max-bytes 3000
+    list-compress-depth 0
+    maxmemory-policy noeviction
+    maxmemory-samples 5
+    no-appendfsync-on-rewrite no
+    set-max-intset-entries 512
+    slowlog-log-slower-than 10000
+    slowlog-max-len 128
+    stop-writes-on-bgsave-error yes
+    tcp-keepalive 0
+    timeout 0
+    zset-max-ziplist-entries 128
+    zset-max-ziplist-value 64
+  bootstrap-pod.sh: |
+    #!/bin/bash
+    set -e
+    INDEX="${HOSTNAME##*-}"
+    if [ ! -z $REDIS_PASSWD ];then
+      echo "requirepass $REDIS_PASSWD" >> /etc/redis/redis.conf
+      echo "masterauth $REDIS_PASSWD" >> /etc/redis/redis.conf
+    fi
+    echo "cluster-announce-ip {{ .Values.nodePortIP }}" >> /etc/redis/redis.conf
+    case $INDEX in
+      0)
+        echo "cluster-announce-port {{ .Values.redisNodePort.node1 }}" >> /etc/redis/redis.conf
+        echo "cluster-announce-bus-port {{ .Values.redisNodePort.gossip1 }}" >> /etc/redis/redis.conf
+        ;;
+      1)
+        echo "cluster-announce-port {{ .Values.redisNodePort.node2 }}" >> /etc/redis/redis.conf
+        echo "cluster-announce-bus-port {{ .Values.redisNodePort.gossip2 }}" >> /etc/redis/redis.conf
+        ;;
+      2)
+        echo "cluster-announce-port {{ .Values.redisNodePort.node3 }}" >> /etc/redis/redis.conf
+        echo "cluster-announce-bus-port {{ .Values.redisNodePort.gossip3 }}" >> /etc/redis/redis.conf
+        ;;
+      3)
+        echo "cluster-announce-port {{ .Values.redisNodePort.node4 }}" >> /etc/redis/redis.conf
+        echo "cluster-announce-bus-port {{ .Values.redisNodePort.gossip4 }}" >> /etc/redis/redis.conf
+        ;;
+      4)
+        echo "cluster-announce-port {{ .Values.redisNodePort.node5 }}" >> /etc/redis/redis.conf
+        echo "cluster-announce-bus-port {{ .Values.redisNodePort.gossip5 }}" >> /etc/redis/redis.conf
+        ;;
+      5)
+        echo "cluster-announce-port {{ .Values.redisNodePort.node6 }}" >> /etc/redis/redis.conf
+        echo "cluster-announce-bus-port {{ .Values.redisNodePort.gossip6 }}" >> /etc/redis/redis.conf
+        ;;
+      *)
+        echo "error"
+      esac
+    redis-server /etc/redis/redis.conf &
+    peer-finder -on-start '/script/meet-cluster.sh' -service {{ printf "%s-headless" (include "redis-cluster.fullname" .) }} -ns $POD_NAMESPACE
+    sleep 1
+    wait
+  meet-cluster.sh: |
+    #!/bin/bash
+    set -e
+    PORT=6379
+    REDIS_ENDPOINT=""
+    PET_ORDINAL=${HOSTNAME##*-}
+    MEET_FLAG=$(grep "connected" /data/nodes.conf | wc -l)
+    if [ $PET_ORDINAL -eq 5 ] && [ $MEET_FLAG -ne 6 ]; then
+      echo "creating cluster..."
+      while read -ra LINE
+      do
+        REDIS_ENDPOINT="${REDIS_ENDPOINT} $(getent hosts ${LINE} | cut -d ' ' -f1):${PORT}"
+      done
+      echo "check cluster node ..."
+      for PEER_IP in $(getent hosts ${LINE} | cut -d ' ' -f1)
+      do
+        if [ -z $REDIS_PASSWD ];then
+          until redis-cli -h $PEER_IP ping; do sleep 1; done
+        else
+          until redis-cli -h $PEER_IP -a $REDIS_PASSWD ping; do sleep 1; done
+        fi
+      done
+      echo "create cluster command: redis-cli --cluster create ${REDIS_ENDPOINT} -a xxxxxxx --cluster-replicas 1"
+      sleep 15
+      echo yes | redis-cli --cluster create ${REDIS_ENDPOINT} -a $REDIS_PASSWD --cluster-replicas 1
+    # a used pod has been found,and meet into the cluster
+    elif [ $PET_ORDINAL -ne 5 ];then
+      echo "not the last replication"
+    elif [[ $MEET_FLAG -eq 6 ]];then
+      echo "here is a used node from other cluster"
+      redis-cli -c cluster meet ${POD_IP} ${PORT}
+    fi

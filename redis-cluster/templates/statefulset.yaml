@@ -1,0 +1,160 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "redis-cluster.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redis-cluster.labels" . | nindent 4 }}
+spec:
+  replicas: 6
+  selector:
+    matchLabels:
+      {{- include "redis-cluster.selectorLabels" . | nindent 6 }}
+  serviceName: {{ printf "%s-headless" (include "redis-cluster.fullname" .) }}
+  {{- if .Values.updateStrategy }}
+  updateStrategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
+  {{- end }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "redis-cluster.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "redis-cluster.serviceAccountName" . }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      initContainers:
+        - name: init-redis
+          image: "{{ .Values.initImage.repository }}:{{ .Values.initImage.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.initImage.pullPolicy }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              cat /tmp/redis.conf >> /mnt/redis.conf;
+              cp -a /usr/bin/peer-finder /mnt;
+              chmod 775 /mnt/peer-finder
+          volumeMounts:
+            - name: redis-conf
+              mountPath: /tmp
+            - name: config
+              mountPath: /mnt
+      containers:
+        - name: redis
+          {{- if .Values.lifecycleHooks }}
+          lifecycle: {{- toYaml .Values.lifecycleHooks | nindent 12 }}
+          {{- end }}
+          {{- if .Values.securityContext }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.redisImage.repository }}:{{ .Values.redisImage.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.redisImage.pullPolicy }}
+          ports:
+            - containerPort: 6379
+              name: redis
+            - containerPort: 16379
+              name: gossip
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              /script/bootstrap-pod.sh
+          env:
+            - name: TZ
+              value: Asia/Shanghai
+            # 设置Redis密码，密码通过secret存储
+            - name: REDIS_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "redis-cluster.fullname" . }}
+                  key: password
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          readinessProbe:
+            exec:
+              command:
+                - "/bin/sh"
+                - "-c"
+                - "redis-cli -h $(hostname) -a $REDIS_PASSWD ping"
+            initialDelaySeconds: 10
+            timeoutSeconds: 2
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - "/bin/sh"
+                - "-c"
+                - "redis-cli -h $(hostname) -a $REDIS_PASSWD ping"
+            initialDelaySeconds: 60
+            timeoutSeconds: 3
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: script
+              mountPath: /script
+              readOnly: false
+            - name: config
+              mountPath: /usr/bin/peer-finder
+              subPath: peer-finder
+              readOnly: false
+            - name: config
+              mountPath: /etc/redis/redis.conf
+              subPath: redis.conf
+              readOnly: false
+            - name: data
+              mountPath: /data
+              readOnly: false
+      volumes:
+        - name: redis-conf
+          configMap:
+            name: {{ include "redis-cluster.fullname" . }}
+            items:
+              - key: redis.conf
+                path: redis.conf
+            defaultMode: 0666
+        - name: config
+          emptyDir: {}
+        - name: script
+          configMap:
+            name: {{ include "redis-cluster.fullname" . }}
+            items:
+              - key: bootstrap-pod.sh
+                path: bootstrap-pod.sh
+              - key: meet-cluster.sh
+                path: meet-cluster.sh
+            defaultMode: 0777
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: "{{ .Values.data.storageClassName }}"
+        resources:
+          requests:
+            storage: {{ .Values.data.storageSize }}
