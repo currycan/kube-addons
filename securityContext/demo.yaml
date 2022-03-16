@@ -38,7 +38,7 @@ spec:
       # priorityClassName: high-priority
       containers:
       - name: stress-app
-        image: currycan/stress-app:0.0.4-alpine
+        image: currycan/stress-app:0.0.5-alpine
         # command:
         #   - sh
         #   - -c
@@ -46,7 +46,8 @@ spec:
         #     # exec /bin/tini -- java ${APP_OPTS} ${JAVA_OPTS} ${JVM_ARGS} ${JVM_GC} -jar "${WORKDIR}/${JAR_FILE}" "$@"
         args:
           - "--file.path=/etc/hosts"
-        imagePullPolicy: IfNotPresent
+        # imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         # 配置容器 workdir,目录不存在会自动创建！
         # workingDir: /workdir
         ports:
@@ -66,39 +67,57 @@ spec:
               - -c
               - sleep 1
         env:
+        - name: MY_CPU_LIMIT
+          valueFrom:
+            resourceFieldRef:
+              containerName: stress-app
+              resource: limits.cpu
+        - name: PODNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        # https://kubernetes.io/docs/tasks/inject-data-application/define-interdependent-environment-variables/
+        - name: JVM_LOGS
+          value: /app/logs/app-demo/$(PODNAME)
         - name: JAVA_OPTS
           value: >-
             -XX:+UseG1GC
             -XX:MaxGCPauseMillis=100
             -XX:InitiatingHeapOccupancyPercent=40
+            -XX:ActiveProcessorCount=$(MY_CPU_LIMIT)
             -XX:+ParallelRefProcEnabled
         - name: JVM_ARGS
           value: >-
             -XX:+UseContainerSupport
+            -XX:+UseAdaptiveSizePolicy
             -XX:+UnlockExperimentalVMOptions
-            -XX:+UseCGroupMemoryLimitForHeap
             -XX:MaxRAMPercentage=80.0
             -XX:InitialRAMPercentage=50.0
             -XX:MinRAMPercentage=40.0
+            -XX:MinHeapFreeRatio=40
+            -XX:MaxHeapFreeRatio=70
         - name: JVM_GC
           value: >-
             -XX:+PrintTenuringDistribution
             -XX:+PrintGCDetails
             -XX:+PrintGCDateStamps
             -XX:+PrintHeapAtGC
-            -Xloggc:/jvm/logs/gc-%t.log
-            -XX:ErrorFile=/jvm/logs/hs_err_%p.log
+            -XX:+UseGCLogFileRotation
+            -XX:NumberOfGCLogFiles=5
+            -XX:GCLogFileSize=100M
+            -Xloggc:$(JVM_LOGS)/gc-%t.log
+            -XX:ErrorFile=$(JVM_LOGS)/hs_err_%p.log
             -XX:+PrintGCApplicationStoppedTime
             -XX:+PrintGCApplicationConcurrentTime
             -XX:+HeapDumpOnOutOfMemoryError
             -XX:+PrintClassHistogramBeforeFullGC
             -XX:+PrintClassHistogramAfterFullGC
-            -XX:HeapDumpPath=/jvm/logs/
+            -XX:HeapDumpPath=$(JVM_LOGS)
         - name: TZ
           value: Asia/Shanghai
         resources:
           limits:
-            cpu: '1'
+            cpu: '1000m'
             memory: 256Mi
           requests:
             cpu: 100m
@@ -135,9 +154,13 @@ spec:
           # 应用需要写入文件（如日志）的，开启会导致应用启动失败
           readOnlyRootFilesystem: false
           # # 当以 root 用户启动时, 配置 capabilities 需要：privileged=true
+          # https://unofficial-kubernetes.readthedocs.io/en/latest/concepts/policy/container-capabilities/
           capabilities:
             add:
             - NET_BIND_SERVICE
+            - CHOWN
+            - SETGID
+            - SETUID
             drop:
             - all
         volumeMounts:
