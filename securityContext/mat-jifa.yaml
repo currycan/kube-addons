@@ -1,0 +1,73 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mat-jifa
+spec:
+  selector:
+    app: mat-jifa
+  type: NodePort
+  ports:
+  - name: mat-jifa
+    protocol: TCP
+    port: 8102
+    targetPort: http-8102
+    nodePort: 30001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mat-jifa
+  labels:
+    app: mat-jifa
+spec:
+  selector:
+    matchLabels:
+      app: mat-jifa
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: mat-jifa
+    spec:
+      containers:
+      - name: mat-jifa
+        image: jifadocker/jifa-worker:demo
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 10
+            memory: 10240Mi
+        livenessProbe:
+          tcpSocket:
+            port: 8102
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 8102
+          initialDelaySeconds: 5
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        ports:
+        - name: http-8102
+          containerPort: 8102
+        volumeMounts:
+        - name: localtime
+          mountPath: /etc/localtime
+      volumes:
+        - name: localtime
+          hostPath:
+            path: /usr/share/zoneinfo/Asia/Shanghai

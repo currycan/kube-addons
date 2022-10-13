@@ -1,0 +1,131 @@
+---
+# http://localhost:8080/system-info/
+apiVersion: v1
+kind: Service
+metadata:
+  name: cgrouptest
+  namespace: default
+spec:
+  selector:
+    app: cgrouptest
+  type: NodePort
+  ports:
+  - name: cgrouptest
+    protocol: TCP
+    port: 8080
+    targetPort: http-8080
+    nodePort: 30000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cgrouptest
+  namespace: default
+  labels:
+    app: cgrouptest
+spec:
+  selector:
+    matchLabels:
+      app: cgrouptest
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: cgrouptest
+    spec:
+      initContainers:
+      - image: registry.cn-hangzhou.aliyuncs.com/denverdino/system-info
+        name: app
+        imagePullPolicy: IfNotPresent
+        command:
+          - "cp"
+          - "-r"
+          - "/system-info"
+          - "/app"
+        volumeMounts:
+        - mountPath: /app
+          name: app-volume
+      containers:
+      - name: tomcat
+        image: tomcat:9-jdk8
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 1
+            memory: 1024Mi
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        env:
+        - name: MY_CPU_LIMIT
+          valueFrom:
+            resourceFieldRef:
+              containerName: tomcat
+              resource: limits.cpu
+        - name: JVM_LOGS
+          value: /app/logs/$(PODNAME)
+        - name: JAVA_OPTS
+          value: >-
+            -XX:+UseG1GC
+            -XX:MaxGCPauseMillis=100
+            -XX:InitiatingHeapOccupancyPercent=40
+            -XX:ActiveProcessorCount=$(MY_CPU_LIMIT)
+            -XX:+ParallelRefProcEnabled
+            -XX:+UseContainerSupport
+            -XX:+UseAdaptiveSizePolicy
+            -XX:+UnlockExperimentalVMOptions
+            -XX:MaxRAMPercentage=70.0
+            -XX:InitialRAMPercentage=70.0
+            -XX:MinRAMPercentage=40.0
+            -XX:MinHeapFreeRatio=40
+            -XX:MaxHeapFreeRatio=70
+            -XX:+PrintTenuringDistribution
+            -XX:+PrintGCDetails
+            -XX:+PrintGCDateStamps
+            -XX:+PrintHeapAtGC
+            -XX:+UseGCLogFileRotation
+            -XX:NumberOfGCLogFiles=5
+            -XX:GCLogFileSize=100M
+            -Xloggc:$(JVM_LOGS)/gc-%t.log
+            -XX:ErrorFile=$(JVM_LOGS)/hs_err_%p.log
+            -XX:+PrintGCApplicationStoppedTime
+            -XX:+PrintGCApplicationConcurrentTime
+            -XX:+HeapDumpOnOutOfMemoryError
+            -XX:+PrintClassHistogramBeforeFullGC
+            -XX:+PrintClassHistogramAfterFullGC
+            -XX:HeapDumpPath=$(JVM_LOGS)
+        workingDir: /app/logs
+        ports:
+        - name:  http-8080
+          containerPort: 8080
+        volumeMounts:
+        - name: app-volume
+          mountPath: /usr/local/tomcat/webapps
+        - name: localtime
+          mountPath: /etc/localtime
+      volumes:
+      - name: app-volume
+        emptyDir: {}
+      - name: localtime
+        hostPath:
+          path: /usr/share/zoneinfo/Asia/Shanghai
