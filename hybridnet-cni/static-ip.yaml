@@ -22,3 +22,70 @@ spec:
         ports:
         - containerPort: 80
           name: web
+        resources:
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-ip
+  namespace: default
+  labels:
+    app: test-ip
+spec:
+  selector:
+    matchLabels:
+      app: test-ip
+  replicas: 4
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        networking.alibaba.com/network-type: "Underlay"
+        # networking.alibaba.com/specified-network: <network name>
+        # networking.alibaba.com/network-type: <network type>
+        # networking.alibaba.com/specified-subnet: <subnet name>
+      labels:
+        app: test-ip
+    spec:
+      containers:
+      - name: test-ip
+        image: nginx:alpine
+        resources:
+          requests:
+            cpu: 10m
+            memory: 10Mi
+          limits:
+            cpu: 10m
+            memory: 10Mi
+        livenessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        ports:
+        - containerPort:  80
+          name: test-ip
+        volumeMounts:
+        - name: localtime
+          mountPath: /etc/localtime
+      volumes:
+        - name: localtime
+          hostPath:
+            path: /usr/share/zoneinfo/Asia/Shanghai
+      restartPolicy: Always
