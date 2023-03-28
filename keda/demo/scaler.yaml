@@ -1,0 +1,22 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: redis-scaledobject
+spec:
+  scaleTargetRef:
+    kind: Deployment
+    name: nginx
+  minReplicaCount: 1
+  maxReplicaCount: 10
+  pollingInterval: 30
+  cooldownPeriod:  120
+  triggers:
+    - type: redis
+      metadata:
+        address: redis:6379
+        enableTLS: "false"
+        # redis监控 list
+        listName: scaler
+        # 触发扩缩容
+        listLength: "5"
+        databaseIndex: "0"
