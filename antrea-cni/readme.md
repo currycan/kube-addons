@@ -8,20 +8,6 @@ helm repo add antrea https://charts.antrea.io
 helm repo update
 helm install antrea antrea/antrea --namespace kube-system
 
-helm repo add hybridnet https://alibaba.github.io/hybridnet/
-helm repo update
-helm install hybridnet hybridnet/hybridnet -n kube-system \
-  --set init.withoutNetwork=true \
-  --set manager.replicas=1 \
-  --set webhook.replicas=1 \
-  --set defaultNetworkType=Overlay \
-  --set multiCluster=false
-
-# 删除
-kubectl delete networks.networking.alibaba.com init
-kubectl delete subnets.networking.alibaba.com init
-kubectl delete ipinstances.networking.alibaba.com 172-29-0-4
-
 ```
 VERSION=v1.8.0
 https://github.com/vmware-tanzu/antrea/releases/download/$VERSION/antrea.yml
