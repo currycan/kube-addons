@@ -1,0 +1,349 @@
+---
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: 10.0.1.4
+  bindPort: 6443
+nodeRegistration:
+  kubeletExtraArgs:
+    network-plugin: cni
+    root-dir: /var/lib/kubelet
+    hostname-override: 10.0.1.4
+    pod-infra-container-image: "registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.5"
+  criSocket: /var/run/dockershim.sock
+  name: 10.0.1.4
+  taints: []
+bootstrapTokens:
+- groups:
+  - system:bootstrappers:kubeadm:default-node-token
+  description: "kubeadm bootstrap token"
+  token: d5cu8u.vtwegzchfgdgnhfn
+  ttl: "24h0m0s"
+  usages:
+  - signing
+  - authentication
+---
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+kubernetesVersion: v1.15.12
+clusterName: kubernetes
+controlPlaneEndpoint: "10.0.1.4:6443"
+certificatesDir: /etc/kubernetes/pki
+dns:
+  type: CoreDNS
+  imageRepository: "docker.io/coredns"
+  imageTag: "1.8.6"
+etcd:
+  external:
+    endpoints:
+    - https://10.0.1.4:2379
+    caFile: /etc/kubernetes/pki/etcd/ca.crt
+    certFile: /etc/kubernetes/pki/apiserver-etcd-client.crt
+    keyFile: /etc/kubernetes/pki/apiserver-etcd-client.key
+imageRepository: "registry.cn-hangzhou.aliyuncs.com/google_containers"
+networking:
+  dnsDomain: cluster.local
+  podSubnet: 172.30.0.0/16
+  serviceSubnet: "172.31.0.0/16"
+apiServer:
+  extraArgs:
+    enable-admission-plugins: NamespaceExists,NamespaceLifecycle,LimitRanger,ServiceAccount,Priority,DefaultTolerationSeconds,DefaultStorageClass,PersistentVolumeClaimResize,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota,NodeRestriction,PersistentVolumeLabel
+    feature-gates: "TTLAfterFinished=true,RotateKubeletServerCertificate=true"
+    audit-log-maxbackup: "10"
+    requestheader-client-ca-file: "/etc/kubernetes/pki/front-proxy-ca.crt"
+    watch-cache-sizes: "node#100,pod#1000"
+    encryption-provider-config: "/etc/kubernetes/pki/secrets-encryption.yaml"
+    requestheader-extra-headers-prefix: "X-Remote-Extra-"
+    kubelet-client-key: "/etc/kubernetes/pki/apiserver-kubelet-client.key"
+    max-mutating-requests-inflight: "500"
+    kubelet-client-certificate: "/etc/kubernetes/pki/apiserver-kubelet-client.crt"
+    api-audiences: "api,istio-ca"
+    alsologtostderr: "true"
+    logtostderr: "false"
+    requestheader-allowed-names: ""
+    audit-log-truncate-enabled: "true"
+    audit-log-maxsize: "100"
+    apiserver-count: "1"
+    audit-log-path: "/var/log/kubernetes/audit/apiserver_audit.log"
+    profiling: "false"
+    tls-cipher-suites: "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256"
+    requestheader-username-headers: "X-Remote-User"
+    enable-bootstrap-token-auth: "true"
+    audit-policy-file: "/etc/kubernetes/audit/policy.yaml"
+    max-requests-inflight: "1500"
+    service-account-issuer: "https://kubernetes.default.svc.cluster.local"
+    enable-aggregator-routing: "true"
+    runtime-config=api/all: "true"
+    requestheader-group-headers: "X-Remote-Group"
+    allow-privileged: "true"
+    kubelet-certificate-authority: "/etc/kubernetes/pki/ca.crt"
+    audit-log-maxage: "30"
+    log-dir: "/var/log/kubernetes/kube-apiserver"
+    v: "2"
+    service-node-port-range: "30000-32767"
+    service-account-signing-key-file: "/etc/kubernetes/pki/sa.key"
+  extraVolumes:
+    - hostPath: /etc/localtime
+      mountPath: /etc/localtime
+      pathType: File
+      readOnly: true
+      name: localtime
+    - hostPath: "/etc/kubernetes/audit"
+      mountPath: "/etc/kubernetes/audit"
+      pathType: DirectoryOrCreate
+      readOnly: true
+      name: audit-policy
+    - hostPath: "/var/log/kubernetes/audit"
+      mountPath: "/var/log/kubernetes/audit"
+      pathType: DirectoryOrCreate
+      name: audit-logs
+    # - hostPath: "/var/log/kubernetes/kube-apiserver"
+    #   mountPath: "/var/log/kubernetes/kube-apiserver"
+    #   pathType: DirectoryOrCreate
+    #   name: kube-apiserver-logs
+  certSANs:
+  - localhost
+  - kubernetes
+  - kubernetes.default
+  - kubernetes.default.svc
+  - kubernetes.default.svc.cluster
+  - kubernetes.default.svc.cluster.local
+  - vm-1-4-centos
+  - apiserver.cluster.local
+  - 127.0.0.1
+  - 0:0:0:0:0:0:0:1
+  - 172.31.0.1
+  - 10.10.10.49
+  - 10.0.1.4
+  - 8.8.8.8
+controllerManager:
+  extraArgs:
+    bind-address: 127.0.0.1
+    feature-gates: "TTLAfterFinished=true,RotateKubeletServerCertificate=true"
+    profiling: "false"
+
+    horizontal-pod-autoscaler-initial-readiness-delay: "30s"
+    requestheader-allowed-names: ""
+    alsologtostderr: "true"
+    concurrent-service-syncs: "2"
+    attach-detach-reconcile-sync-period: "1m0s"
+    requestheader-client-ca-file: "/etc/kubernetes/pki/front-proxy-ca.crt"
+    kube-api-qps: "100"
+    logtostderr: "false"
+    concurrent-deployment-syncs: "10"
+    horizontal-pod-autoscaler-cpu-initialization-period: "5m0s"
+    service-cluster-ip-range: "172.31.0.0/16"
+    kube-api-burst: "100"
+    concurrent-replicaset-syncs: "10"
+    controllers: "*,bootstrapsigner,tokencleaner"
+    concurrent-gc-syncs: "30"
+    cluster-name: "kubernetes"
+    allocate-node-cidrs: "true"
+    horizontal-pod-autoscaler-downscale-stabilization: "15m"
+    cluster-cidr: "172.30.0.0/16"
+    horizontal-pod-autoscaler-sync-period: "30s"
+    horizontal-pod-autoscaler-tolerance: "0.1"
+  extraVolumes:
+    - hostPath: /etc/localtime
+      mountPath: /etc/localtime
+      pathType: File
+      readOnly: true
+      name: localtime
+    # - hostPath: "/var/log/kubernetes/kube-controller-manager"
+    #   mountPath: "/var/log/kubernetes/kube-controller-manager"
+    #   pathType: DirectoryOrCreate
+    #   name: kube-controller-manager-logs
+scheduler:
+  extraArgs:
+    bind-address: 127.0.0.1
+    feature-gates: "TTLAfterFinished=true,RotateKubeletServerCertificate=true"
+    profiling: "false"
+    alsologtostderr: "true"
+    requestheader-client-ca-file: "/etc/kubernetes/pki/front-proxy-ca.crt"
+    kube-api-qps: "100"
+    logtostderr: "false"
+    requestheader-allowed-names: ""
+    kube-api-burst: "100"
+  extraVolumes:
+    - hostPath: /etc/localtime
+      mountPath: /etc/localtime
+      pathType: File
+      readOnly: true
+      name: localtime
+    # - hostPath: "/var/log/kubernetes/kube-scheduler"
+    #   mountPath: "/var/log/kubernetes/kube-scheduler"
+    #   pathType: DirectoryOrCreate
+    #   name: kube-scheduler-logs
+    - name: k8s-certs
+      hostPath: /etc/kubernetes/pki
+      mountPath: /etc/kubernetes/pki
+      readOnly: True
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+# 身份验证
+authentication:
+  anonymous:
+    enabled: false
+  webhook:
+    cacheTTL: 2m0s
+    enabled: true
+  x509:
+    clientCAFile: "/etc/kubernetes/pki/ca.crt"
+# 授权
+authorization:
+  mode: Webhook
+  webhook:
+    cacheAuthorizedTTL: 5m0s
+    cacheUnauthorizedTTL: 30s
+cgroupDriver: "systemd"
+cgroupRoot: "/"
+cgroupsPerQOS: true
+clusterDNS:
+- "172.31.0.10"
+clusterDomain: "cluster.local"
+configMapAndSecretChangeDetectionStrategy: Watch
+containerLogMaxFiles: 10
+containerLogMaxSize: 20Mi
+contentType: application/vnd.kubernetes.protobuf
+cpuCFSQuota: true
+cpuCFSQuotaPeriod: 100ms
+cpuManagerReconcilePeriod: 10s
+enableContentionProfiling: true
+enableControllerAttachDetach: true
+enableDebuggingHandlers: true
+enableSystemLogHandler: true
+# Node 资源驱逐策略
+evictionHard:
+  imagefs.available: "15%"
+  memory.available: "300Mi"
+  nodefs.available: "10%"
+  nodefs.inodesFree: "5%"
+evictionMaxPodGracePeriod: 30
+evictionPressureTransitionPeriod: 0s
+evictionSoft:
+  imagefs.available: "15%"
+  memory.available: "512Mi"
+  nodefs.available: "15%"
+  nodefs.inodesFree: "10%"
+evictionSoftGracePeriod:
+  imagefs.available: 3m
+  memory.available: 1m
+  nodefs.available: 3m
+  nodefs.inodesFree: 1m
+evictionMinimumReclaim: {}
+failSwapOn: true
+cpuManagerPolicy: none
+# Node 资源预留
+enforceNodeAllocatable:
+- pods
+# Cgroups
+# Cgroups
+eventBurst: 10
+eventRecordQPS: 5
+featureGates:
+  TTLAfterFinished: true
+  RotateKubeletServerCertificate: true
+fileCheckFrequency: 20s
+hairpinMode: hairpin-veth
+healthzBindAddress: 127.0.0.1
+# kubelet健康检查端口
+httpCheckFrequency: 20s
+# 镜像删除策略
+imageGCHighThresholdPercent: 85
+imageGCLowThresholdPercent: 80
+imageMinimumGCAge: 2m0s
+iptablesDropBit: 15
+iptablesMasqueradeBit: 14
+kubeAPIBurst: 100
+kubeAPIQPS: 100
+makeIPTablesUtilChains: true
+maxOpenFiles: 1000000
+maxPods: 128
+nodeLeaseDurationSeconds: 40
+nodeStatusMaxImages: 50
+nodeStatusReportFrequency: 1m0s
+nodeStatusUpdateFrequency: 10s
+oomScoreAdj: -999
+podPidsLimit: -1
+# 监听地址
+address: 0.0.0.0
+registryBurst: 20
+registryPullQPS: 5
+resolvConf: /etc/resolv.conf
+rotateCertificates: true
+# 只能设置为 false，否则启动报错: panic: runtime error: invalid memory address or nil pointer dereference
+runOnce: false
+runtimeRequestTimeout: 15m0s
+serializeImagePulls: false
+serverTLSBootstrap: true
+staticPodPath: "/etc/kubernetes/manifests"
+streamingConnectionIdleTimeout: 4h0m0s
+syncFrequency: 1m0s
+tlsCipherSuites:
+- TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+- TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+- TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+- TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+- TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+- TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+- TLS_RSA_WITH_AES_256_GCM_SHA384
+- TLS_RSA_WITH_AES_128_GCM_SHA256
+volumePluginDir: /usr/libexec/kubernetes/kubelet-plugins/volume/exec/
+volumeStatsAggPeriod: 1m0s
+AllowedUnsafeSysctls:
+- net.core.somaxconn
+- kernel.msg*
+kernelMemcgNotification: false
+protectKernelDefaults: false
+topologyManagerPolicy: "none"
+topologyManagerScope: "container"
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+bindAddress: 0.0.0.0
+healthzBindAddress: "127.0.0.1:10256"
+metricsBindAddress: "127.0.0.1:10249"
+clientConnection:
+  acceptContentTypes: ""
+  burst: 100
+  contentType: application/vnd.kubernetes.protobuf
+  kubeconfig: "/var/lib/kube-proxy/kubeconfig.conf"
+  qps: 100
+clusterCIDR: "172.30.0.0/16"
+configSyncPeriod: 10m0s
+conntrack:
+  maxPerCore: 32768
+  min: 131072
+  tcpCloseWaitTimeout: 1h0m0s
+  tcpEstablishedTimeout: 24h0m0s
+detectLocalMode: ""
+enableProfiling: false
+hostnameOverride: "10.0.1.4"
+featureGates:
+  TTLAfterFinished: true
+  RotateKubeletServerCertificate: true
+mode: "ipvs"
+iptables:
+  masqueradeAll: false
+  masqueradeBit: 14
+  minSyncPeriod: 0s
+  syncPeriod: 30s
+ipvs:
+  excludeCIDRs: []
+  minSyncPeriod: 0s
+  scheduler: "rr"
+  # metalLB
+  strictARP: true
+  syncPeriod: 30s
+  tcpFinTimeout: 5s
+  tcpTimeout: 5s
+  udpTimeout: 5s
+nodePortAddresses: []
+oomScoreAdj: -999
+portRange: ""
+udpIdleTimeout: 250ms
+winkernel:
+  enableDSR: false
+  networkName: ""
+  sourceVip: ""

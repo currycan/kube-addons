@@ -1,0 +1,235 @@
+---
+apiVersion: apps.sealos.io/v1beta1
+kind: Cluster
+metadata:
+  creationTimestamp: null
+  name: demo
+spec:
+  hosts:
+  - ips:
+    - 10.10.10.1:22
+    - 10.10.10.2:22
+    - 10.10.10.3:22
+    roles:
+    - master
+    - amd64
+  - ips:
+    - 10.10.10.4:22
+    - 10.10.10.5:22
+    - 10.10.10.6:22
+    roles:
+    - node
+    - amd64
+  image:
+  - labring/kubernetes:v1.25.0
+  - labring/helm:v3.8.2
+  - labring/calico:v3.24.1
+  ssh:
+    pk: /root/.ssh/id_ed25519
+    port: 22
+    user: root
+status: {}
+---
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+clusterName: kubernetes
+# controlPlaneEndpoint: apiserver.cluster.local:6443
+dns:
+  type: CoreDNS
+  # imageRepository: "docker.io/coredns"
+  # imageTag: "1.8.6"
+etcd:
+  local:
+    dataDir: /var/lib/etcd
+    extraArgs:
+      listen-metrics-urls: http://0.0.0.0:2381
+# imageRepository: "registry.cn-hangzhou.aliyuncs.com/google_containers"
+networking:
+  dnsDomain: cluster.local
+  podSubnet: 172.30.0.0/16
+  serviceSubnet: "172.31.0.0/16"
+apiServer:
+  extraArgs:
+    audit-log-format: json
+    audit-log-maxage: "7"
+    audit-log-maxbackup: "10"
+    audit-log-maxsize: "100"
+    audit-log-path: /var/log/kubernetes/audit.log
+    audit-policy-file: /etc/kubernetes/audit-policy.yml
+    enable-aggregator-routing: "true"
+  extraVolumes:
+  - hostPath: /etc/kubernetes
+    mountPath: /etc/kubernetes
+    name: audit
+    pathType: DirectoryOrCreate
+  - hostPath: /var/log/kubernetes
+    mountPath: /var/log/kubernetes
+    name: audit-log
+    pathType: DirectoryOrCreate
+  - hostPath: /etc/localtime
+    mountPath: /etc/localtime
+    name: localtime
+    pathType: File
+    readOnly: true
+controllerManager:
+  extraArgs:
+    bind-address: 0.0.0.0
+  extraVolumes:
+  - hostPath: /etc/localtime
+    mountPath: /etc/localtime
+    name: localtime
+    pathType: File
+    readOnly: true
+scheduler:
+  extraArgs:
+    bind-address: 0.0.0.0
+  extraVolumes:
+  - hostPath: /etc/localtime
+    mountPath: /etc/localtime
+    name: localtime
+    pathType: File
+    readOnly: true
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+authentication:
+  anonymous:
+    enabled: false
+  webhook:
+    cacheTTL: 2m0s
+    enabled: true
+  x509:
+    clientCAFile: /etc/kubernetes/pki/ca.crt
+authorization:
+  mode: Webhook
+  webhook:
+    cacheAuthorizedTTL: 5m0s
+    cacheUnauthorizedTTL: 30s
+cgroupDriver: systemd
+cgroupsPerQOS: true
+clusterDomain: cluster.local
+configMapAndSecretChangeDetectionStrategy: Watch
+containerLogMaxFiles: 5
+containerLogMaxSize: 10Mi
+contentType: application/vnd.kubernetes.protobuf
+cpuCFSQuota: true
+cpuCFSQuotaPeriod: 100ms
+cpuManagerPolicy: none
+cpuManagerReconcilePeriod: 10s
+enableControllerAttachDetach: true
+enableDebuggingHandlers: true
+enforceNodeAllocatable:
+- pods
+eventBurst: 10
+eventRecordQPS: 5
+evictionHard:
+  imagefs.available: 15%
+  memory.available: 100Mi
+  nodefs.available: 10%
+  nodefs.inodesFree: 5%
+evictionPressureTransitionPeriod: 5m0s
+failSwapOn: true
+fileCheckFrequency: 20s
+hairpinMode: promiscuous-bridge
+healthzBindAddress: 127.0.0.1
+healthzPort: 10248
+httpCheckFrequency: 20s
+imageGCHighThresholdPercent: 85
+imageGCLowThresholdPercent: 80
+imageMinimumGCAge: 2m0s
+iptablesDropBit: 15
+iptablesMasqueradeBit: 14
+kind: KubeletConfiguration
+kubeAPIBurst: 10
+kubeAPIQPS: 5
+# logging: {} # 1.18 不兼容
+makeIPTablesUtilChains: true
+maxOpenFiles: 1000000
+maxPods: 110
+nodeLeaseDurationSeconds: 40
+nodeStatusReportFrequency: 10s
+nodeStatusUpdateFrequency: 10s
+oomScoreAdj: -999
+podPidsLimit: -1
+port: 10250
+registryBurst: 10
+registryPullQPS: 5
+rotateCertificates: true
+runtimeRequestTimeout: 2m0s
+serializeImagePulls: true
+shutdownGracePeriod: 0s
+shutdownGracePeriodCriticalPods: 0s
+staticPodPath: /etc/kubernetes/manifests
+streamingConnectionIdleTimeout: 4h0m0s
+syncFrequency: 1m0s
+volumeStatsAggPeriod: 1m0s
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+bindAddress: ""
+# bindAddressHardFail: false # 1.18 不兼容
+clientConnection:
+  acceptContentTypes: ""
+  burst: 0
+  contentType: ""
+  kubeconfig: ""
+  qps: 0
+clusterCIDR: ""
+configSyncPeriod: 0s
+conntrack:
+  maxPerCore: null
+  min: null
+  tcpCloseWaitTimeout: null
+  tcpEstablishedTimeout: null
+detectLocalMode: ""
+enableProfiling: false
+healthzBindAddress: ""
+hostnameOverride: ""
+iptables:
+  masqueradeAll: false
+  masqueradeBit: null
+  minSyncPeriod: 0s
+  syncPeriod: 0s
+ipvs:
+  minSyncPeriod: 0s
+  scheduler: ""
+  strictARP: false
+  syncPeriod: 0s
+  tcpFinTimeout: 0s
+  tcpTimeout: 0s
+  udpTimeout: 0s
+kind: KubeProxyConfiguration
+metricsBindAddress: 0.0.0.0
+mode: ipvs
+nodePortAddresses: null
+oomScoreAdj: null
+portRange: ""
+showHiddenMetricsForVersion: ""
+udpIdleTimeout: 0s
+winkernel:
+  enableDSR: false
+  networkName: ""
+  sourceVip: ""
+---
+apiVersion: apps.sealos.io/v1beta1
+kind: Config
+metadata:
+  name: calico
+spec:
+  path: manifests/calico.yaml
+  data: |
+    apiVersion: operator.tigera.io/v1
+    kind: Installation
+    metadata:
+      name: default
+    spec:
+      # Configures Calico networking.
+      calicoNetwork:
+        # Note: The ipPools section cannot be modified post-install.
+        ipPools:
+        - blockSize: 26
+          # Note: Must be the same as podCIDR
+          cidr: 172.30.0.0/16
+          encapsulation: IPIP
+          natOutgoing: Enabled
+          nodeSelector: all()
+        nodeAddressAutodetectionV4:
+          interface: "eth.*|en.*"
