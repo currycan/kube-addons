@@ -38,12 +38,14 @@ spec:
       # priorityClassName: high-priority
       containers:
       - name: stress-app
-        image: currycan/stress-app:0.0.5-alpine
+        # image: currycan/stress-app:0.0.5-alpine
+        image: currycan/stress-app:0.0.5
         command:
           - sh
           - -c
           - |
-            java ${APP_OPTS} ${JAVA_OPTS} ${JVM_ARGS} ${JVM_GC} -jar "${WORKDIR}/${JAR_FILE}" "$@"
+            mkdir -p ${JVM_LOGS}
+            exec java ${APP_OPTS} ${JMX} ${JAVA_OPTS} ${JVM_ARGS} ${JVM_GC} -jar "${WORKDIR}/${JAR_FILE}" "$@"
         args:
           - "--file.path=/etc/hosts"
         # imagePullPolicy: IfNotPresent
@@ -76,24 +78,42 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: PODIP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: DEPLOYMENT_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app']
         # https://kubernetes.io/docs/tasks/inject-data-application/define-interdependent-environment-variables/
+        - name: APP_OPTS
+          value: ''
+        - name: JMX_PORT
+          value: "18088"
+        - name: JMX
+          value: "-javaagent:/jmx/jmx_prometheus_javaagent.jar=$(JMX_PORT):/jmx/jmx-config.yaml "
         - name: JVM_LOGS
-          value: /app/logs/app-demo/$(PODNAME)
+          value: /app/logs/$(NAMESPACE)/$(DEPLOYMENT_NAME)
         - name: JAVA_OPTS
           value: >-
             -XX:+UseG1GC
-            -XX:MaxGCPauseMillis=100
+            -XX:MaxGCPauseMillis=150
             -XX:InitiatingHeapOccupancyPercent=40
             -XX:ActiveProcessorCount=$(MY_CPU_LIMIT)
             -XX:+ParallelRefProcEnabled
         - name: JVM_ARGS
           value: >-
             -XX:+UseContainerSupport
-            -XX:+UseAdaptiveSizePolicy
+            -XX:-UseAdaptiveSizePolicy
             -XX:+UnlockExperimentalVMOptions
             -XX:MaxRAMPercentage=70.0
             -XX:InitialRAMPercentage=70.0
-            -XX:MinRAMPercentage=40.0
+            -XX:MinRAMPercentage=25.0
             -XX:MinHeapFreeRatio=40
             -XX:MaxHeapFreeRatio=70
         - name: JVM_GC
@@ -105,22 +125,22 @@ spec:
             -XX:+UseGCLogFileRotation
             -XX:NumberOfGCLogFiles=5
             -XX:GCLogFileSize=100M
-            -Xloggc:$(JVM_LOGS)/gc-%t.log
-            -XX:ErrorFile=$(JVM_LOGS)/hs_err_%p.log
+            -Xloggc:$(JVM_LOGS)/gc-$(PODIP)-$(PODNAME)-%t.log
+            -XX:ErrorFile=$(JVM_LOGS)/hs-err-$(PODIP)-$(PODNAME)-%p.log
             -XX:+PrintGCApplicationStoppedTime
             -XX:+PrintGCApplicationConcurrentTime
             -XX:+HeapDumpOnOutOfMemoryError
             -XX:+PrintClassHistogramBeforeFullGC
             -XX:+PrintClassHistogramAfterFullGC
-            -XX:HeapDumpPath=$(JVM_LOGS)
+            -XX:HeapDumpPath=$(JVM_LOGS)/dump-$(PODIP)-$(PODNAME)-%t.hprof
         - name: TZ
           value: Asia/Shanghai
         resources:
           limits:
-            cpu: '1000m'
+            cpu: 2
             memory: 256Mi
           requests:
-            cpu: 100m
+            cpu: 1
             memory: 128Mi
         livenessProbe:
           failureThreshold: 3
@@ -165,7 +185,7 @@ spec:
         #     - all
         volumeMounts:
         - name: dd-file
-          mountPath: /app/logs/app-demo/
+          mountPath: /app/logs/
       volumes:
       - name: dd-file
         persistentVolumeClaim:

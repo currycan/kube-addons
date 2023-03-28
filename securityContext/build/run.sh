@@ -18,18 +18,18 @@ if [[ $# -lt 1 ]] || [[ "$1" == "--"* ]]; then
     if [ "$(id -u)" = '0' ]; then
         # find ${JVM_LOGS} \! -user ${uid} -exec chown ${uid} '{}' +
         # find . \! -user ${uid} -exec chown ${uid} '{}' +
-        chown -R ${uid}:${gid} ${JVM_LOGS} ${WORKDIR}
+        chown -R ${uid}:${gid} ${JVM_LOGS} ${WORKDIR} /jmx/
         if [[ "${release}" == "centos" ]]; then
-            exec /bin/tini /usr/bin/gosu ${uid} -- java ${APP_OPTS} ${JAVA_OPTS} ${JVM_ARGS} ${JVM_GC} -jar "${WORKDIR}/${JAR_FILE}" "$@"
+            exec /bin/tini /usr/bin/gosu ${uid} -- java ${APP_OPTS} ${JAVA_OPTS} ${JVM_ARGS} ${JVM_GC} ${JMX} -jar "${WORKDIR}/${JAR_FILE}" "$@"
         elif [[ "${release}" == "alpine" ]]; then
-            exec /sbin/tini /sbin/su-exec ${uid}:${gid} java ${APP_OPTS} ${JAVA_OPTS} ${JVM_ARGS} ${JVM_GC} -jar "${WORKDIR}/${JAR_FILE}" "$@"
+            exec /sbin/tini /sbin/su-exec ${uid}:${gid} java ${APP_OPTS} ${JAVA_OPTS} ${JVM_ARGS} ${JVM_GC} ${JMX} -jar "${WORKDIR}/${JAR_FILE}" "$@"
         fi
     # run as non-root
     else
         if [[ "${release}" == "centos" ]]; then
-            exec /bin/tini -- java ${APP_OPTS} ${JAVA_OPTS} ${JVM_ARGS} ${JVM_GC} -jar "${WORKDIR}/${JAR_FILE}" "$@"
+            exec /bin/tini -- java ${APP_OPTS} ${JAVA_OPTS} ${JVM_ARGS} ${JVM_GC} ${JMX} -jar "${WORKDIR}/${JAR_FILE}" "$@"
         elif [[ "${release}" == "alpine" ]]; then
-            exec /sbin/tini java ${APP_OPTS} ${JAVA_OPTS} ${JVM_ARGS} ${JVM_GC} -jar "${WORKDIR}/${JAR_FILE}" "$@"
+            exec /sbin/tini java ${APP_OPTS} ${JAVA_OPTS} ${JVM_ARGS} ${JVM_GC} ${JMX} -jar "${WORKDIR}/${JAR_FILE}" "$@"
         fi
     fi
 fi
