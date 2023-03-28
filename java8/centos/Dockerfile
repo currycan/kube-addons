@@ -29,6 +29,7 @@ RUN set -ex; \
   fi; \
   sed -i s/#networkaddress.cache.ttl=-1/networkaddress.cache.ttl=10/ $JAVA_HOME/jre/lib/security/java.security; \
   echo "securerandom.source=file:/dev/urandom" >> $JAVA_HOME/jre/lib/security/java.security; \
+  sed -i s/#networkaddress.cache.ttl=-1/networkaddress.cache.ttl=10/ $JAVA_HOME/jre/lib/security/java.security; \
   rm -rf ${JAVA_HOME}/*src.zip \
     ${JAVA_HOME}/lib/missioncontrol \
     ${JAVA_HOME}/lib/visualvm \
@@ -84,16 +85,18 @@ RUN set -ex; \
   cp -a /root/.bashrc /home/${user}/.bashrc; \
   chown -R ${uid}:${gid} /home/${user}/.bashrc
 
-ENV TINI_VERSION 0.14.0
-ENV TINI_SHA 6c41ec7d33e857d4779f14d9c74924cab0c7973485d2972419a3b7c7620ff5fd
 # Use tini as subreaper in Docker container to adopt zombie processes
-RUN set -ex; \
-  curl -fsSL https://github.com/krallin/tini/releases/download/v${TINI_VERSION}/tini-static-amd64 -o /bin/tini; \
-  chmod 755 /bin/tini; \
-  echo "$TINI_SHA  /bin/tini" | sha256sum -c -
+ENV TINI_VERSION v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /bin/tini
+RUN chmod +x /bin/tini
+# ENV TINI_SHA 6c41ec7d33e857d4779f14d9c74924cab0c7973485d2972419a3b7c7620ff5fd
+# RUN set -ex; \
+#   curl -fsSL https://github.com/krallin/tini/releases/download/v${TINI_VERSION}/tini-static-amd64 -o /bin/tini; \
+#   chmod 755 /bin/tini; \
+#   echo "$TINI_SHA  /bin/tini" | sha256sum -c -
 
 # grab gosu for easy step-down from root
-ENV GOSU_VERSION 1.14
+ENV GOSU_VERSION 1.16
 RUN set -ex; \
   curl -sSLo /usr/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-amd64"; \
   curl -sSLo /usr/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-amd64.asc"; \
@@ -103,6 +106,12 @@ RUN set -ex; \
   rm -rf "$GNUPGHOME" /usr/bin/gosu.asc /root/.gnupg/; \
   chmod 755 /usr/bin/gosu; \
   gosu nobody true
+
+ARG VERSION=0.18.0
+ADD https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/${VERSION}/jmx_prometheus_javaagent-${VERSION}.jar /jmx/jmx_prometheus_javaagent.jar
+COPY jmx-config.yaml /jmx/
+ENV JMX_PORT="18088"
+ENV JMX="-javaagent:/jmx/jmx_prometheus_javaagent.jar=${JMX_PORT}:/jmx/jmx-config.yaml "
 
 # USER ${user}
 

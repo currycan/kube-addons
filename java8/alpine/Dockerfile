@@ -35,6 +35,7 @@ RUN set -ex; \
   fi; \
   sed -i s/#networkaddress.cache.ttl=-1/networkaddress.cache.ttl=10/ $JAVA_HOME/jre/lib/security/java.security; \
   echo "securerandom.source=file:/dev/urandom" >> $JAVA_HOME/jre/lib/security/java.security; \
+  sed -i s/#networkaddress.cache.ttl=-1/networkaddress.cache.ttl=10/ $JAVA_HOME/jre/lib/security/java.security; \
   rm -rf ${JAVA_HOME}/*src.zip \
     ${JAVA_HOME}/lib/missioncontrol \
     ${JAVA_HOME}/lib/visualvm \
@@ -83,7 +84,7 @@ RUN set -ex; apk -U upgrade; apk add --update --no-cache \
   rm -rf /var/cache/apk/*
 
 # glibc
-ENV GLIBC_VERSION=2.34-r0
+ENV GLIBC_VERSION=2.35-r0
 RUN set -ex; \
   apk add --update --no-cache libstdc++; \
   wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub; \
@@ -111,5 +112,11 @@ RUN set -ex; \
   cp -a /root/.bashrc /home/${user}/.bashrc; \
   chown -R ${uid}:${gid} /home/${user}/.bashrc; \
   rm -rf /tmp/* /var/cache/apk/*;
+
+ARG VERSION=0.18.0
+ADD https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/${VERSION}/jmx_prometheus_javaagent-${VERSION}.jar /jmx/jmx_prometheus_javaagent.jar
+COPY jmx-config.yaml /jmx/
+ENV JMX_PORT="18088"
+ENV JMX="-javaagent:/jmx/jmx_prometheus_javaagent.jar=${JMX_PORT}:/jmx/jmx-config.yaml "
 
 CMD [ "/bin/bash" ]

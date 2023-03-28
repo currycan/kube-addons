@@ -9,6 +9,7 @@ RUN set -ex; \
   gettext \
   net-tools \
   telnet \
+  iproute \
   bash-completion \
   kde-l10n-Chinese; \
   yum reinstall -y glibc-common; \
