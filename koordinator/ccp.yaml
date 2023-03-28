@@ -1,0 +1,69 @@
+---
+apiVersion: config.koordinator.sh/v1alpha1
+kind: ClusterColocationProfile
+metadata:
+  name: core-system
+spec:
+  namespaceSelector:
+    matchLabels:
+      enable-koordinator: "true"
+  selector:
+    matchLabels:
+      core-system: "true"
+  qosClass: LS
+  priorityClassName: koord-prod
+  koordinatorPriority: 3000
+  schedulerName: koord-scheduler
+  labels:
+    koordinator.sh/mutated: "true"
+  annotations:
+    koordinator.sh/intercepted: "true"
+  patch:
+    spec:
+      terminationGracePeriodSeconds: 60
+---
+apiVersion: config.koordinator.sh/v1alpha1
+kind: ClusterColocationProfile
+metadata:
+  name: important-system
+spec:
+  namespaceSelector:
+    matchLabels:
+      enable-koordinator: "true"
+  selector:
+    matchLabels:
+      important-system: "true"
+  qosClass: LS
+  priorityClassName: koord-mid
+  koordinatorPriority: 2000
+  schedulerName: koord-scheduler
+  labels:
+    koordinator.sh/mutated: "true"
+  annotations:
+    koordinator.sh/intercepted: "true"
+  patch:
+    spec:
+      terminationGracePeriodSeconds: 45
+---
+apiVersion: config.koordinator.sh/v1alpha1
+kind: ClusterColocationProfile
+metadata:
+  name: normal-system
+spec:
+  namespaceSelector:
+    matchLabels:
+      enable-koordinator: "true"
+  selector:
+    matchLabels:
+      normal-system: "true"
+  qosClass: BE
+  priorityClassName: koord-batch
+  koordinatorPriority: 1000
+  schedulerName: koord-scheduler
+  labels:
+    koordinator.sh/mutated: "true"
+  annotations:
+    koordinator.sh/intercepted: "true"
+  patch:
+    spec:
+      terminationGracePeriodSeconds: 30

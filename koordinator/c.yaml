@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-koord
+  namespace: test
+  labels:
+    app: nginx-koord
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-koord
+  template:
+    metadata:
+      name: nginx-koord
+      labels:
+        app: nginx-koord
+        core-system: "true"
+    spec:
+      schedulerName: koord-scheduler # use the koord-scheduler
+      containers:
+      - name: nginx-koord
+        image: nginx:alpine
+        resources:
+          limits:
+            cpu: 100m
+          requests:
+            cpu: 100m

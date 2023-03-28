@@ -1,0 +1,54 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    core-system: "true"
+  name: core-pod
+spec:
+  containers:
+  - name: core-pod
+    image: nginx:alpine
+    resources:
+        limits:
+          cpu: "100m"
+          memory: "512Mi"
+        requests:
+          cpu: "100m"
+          memory: "512Mi"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    important-system: "true"
+  name: important-pod
+spec:
+  containers:
+  - name: important-pod
+    image: nginx:alpine
+    resources:
+        limits:
+          cpu: "1m"
+          memory: "128Mi"
+        requests:
+          cpu: "1m"
+          memory: "128Mi"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    normal-system: "true"
+  name: normal-pod
+spec:
+  containers:
+  - name: normal-pod
+    image: nginx:alpine
+    resources:
+        limits:
+          kubernetes.io/batch-cpu: "1"
+          kubernetes.io/batch-memory: "512Mi"
+        requests:
+          kubernetes.io/batch-cpu: "100m"
+          kubernetes.io/batch-memory: "64Mi"

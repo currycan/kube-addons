@@ -1,0 +1,192 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-system
+  labels:
+    app: core-system
+spec:
+  selector:
+    matchLabels:
+      app: core-system
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: core-system
+        # enable koordinator colocation
+        core-system: "true"
+    spec:
+      containers:
+      - name: core-system
+        image: nginx:alpine
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        livenessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        ports:
+        - containerPort:  80
+          name: nginx
+        volumeMounts:
+        - name: localtime
+          mountPath: /etc/localtime
+      volumes:
+        - name: localtime
+          hostPath:
+            path: /usr/share/zoneinfo/Asia/Shanghai
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: important-system
+  labels:
+    app: important-system
+spec:
+  selector:
+    matchLabels:
+      app: important-system
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: important-system
+        # enable koordinator colocation
+        important-system: "true"
+    spec:
+      containers:
+      - name: important-system
+        image: nginx:alpine
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 10m
+            memory: 64Mi
+        livenessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        ports:
+        - containerPort:  80
+          name: nginx
+        volumeMounts:
+        - name: localtime
+          mountPath: /etc/localtime
+      volumes:
+        - name: localtime
+          hostPath:
+            path: /usr/share/zoneinfo/Asia/Shanghai
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: normal-system
+  labels:
+    app: normal-system
+spec:
+  selector:
+    matchLabels:
+      app: normal-system
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: normal-system
+        # enable koordinator colocation
+        normal-system: "true"
+    spec:
+      containers:
+      - name: normal-system
+        image: nginx:alpine
+        resources:
+          limits:
+            kubernetes.io/batch-cpu: "1"
+            kubernetes.io/batch-memory: "512Mi"
+          requests:
+            kubernetes.io/batch-cpu: "100m"
+            kubernetes.io/batch-memory: "64Mi"
+          # requests:
+          #   cpu: 100m
+          #   memory: 128Mi
+          # limits:
+          #   cpu: 100m
+          #   memory: 128Mi
+        livenessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        ports:
+        - containerPort:  80
+          name: nginx
+        volumeMounts:
+        - name: localtime
+          mountPath: /etc/localtime
+      volumes:
+        - name: localtime
+          hostPath:
+            path: /usr/share/zoneinfo/Asia/Shanghai
+      restartPolicy: Always
