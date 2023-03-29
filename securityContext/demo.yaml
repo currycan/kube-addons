@@ -111,11 +111,9 @@ spec:
             -XX:+UseContainerSupport
             -XX:-UseAdaptiveSizePolicy
             -XX:+UnlockExperimentalVMOptions
-            -XX:MaxRAMPercentage=70.0
-            -XX:InitialRAMPercentage=70.0
+            -XX:InitialRAMPercentage=60.0
+            -XX:MaxRAMPercentage=60.0
             -XX:MinRAMPercentage=25.0
-            -XX:MinHeapFreeRatio=40
-            -XX:MaxHeapFreeRatio=70
         - name: JVM_GC
           value: >-
             -XX:+PrintTenuringDistribution
