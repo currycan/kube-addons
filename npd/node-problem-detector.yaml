@@ -102,7 +102,6 @@ spec:
         - name: kmsg
           mountPath: /dev/kmsg
           readOnly: true
-          readOnly: true
         - name: config
           mountPath: /config
           readOnly: true

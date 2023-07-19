@@ -184,6 +184,7 @@ spec:
         volumeMounts:
         - name: dd-file
           mountPath: /app/logs/
+          subPathExpr: $(PODNAME)
       volumes:
       - name: dd-file
         persistentVolumeClaim:
